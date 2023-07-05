@@ -1,52 +1,85 @@
 #include <stdio.h>
 #include <math.h>
+int input[32];
+int code[32];
+int ham_calc(int,int);
+void main()
+{
+	int n,i,p_n = 0,c_l,j,k;
+	printf("Please enter the length of the Data Word: ");
+	scanf("%d",&n);
+	printf("Please enter the Data Word:\n");
+	for(i=0;i<n;i++)
+	{
+		scanf("%d",&input[i]);
+	}
 
-int main() {
-    int data[20], hammingCode[30];
-    int dataBits, hammingCodeLen, i, j, k;
+	i=0;
+	while(n>(int)pow(2,i)-(i+1))
+	{
+		p_n++;
+		i++;
+	}
+		
+	c_l = p_n + n;
 
-    printf("Enter the number of data bits: ");
-    scanf("%d", &dataBits);
+	j=k=0;
+	for(i=0;i<c_l;i++)
+	{
+		
+		if(i==((int)pow(2,k)-1))
+		{
+			code[i]=0;
+			k++;
+		}
+		else
+		{
+			code[i]=input[j];
+			j++;
+		}
+	}
+	for(i=0;i<p_n;i++)
+	{
+		int position = (int)pow(2,i);
+		int value = ham_calc(position,c_l);
+		code[position-1]=value;
+	}
+	printf("\nThe calculated Code Word is: ");
+	for(i=0;i<c_l;i++)
+		printf("%d",code[i]);
+	printf("\n");
+	printf("Please enter the received Code Word:\n");
+	for(i=0;i<c_l;i++)
+		scanf("%d",&code[i]);
 
-    // Calculate the number of parity bits required
-    for (i = 0; i < dataBits; i++) {
-        hammingCode[i] = 0; // Initialize all bits to 0
-    }
-    hammingCodeLen = dataBits;
-
-    // Read the data bits
-    printf("Enter the data bits (in binary): ");
-    for (i = 0; i < dataBits; i++) {
-        scanf("%d", &data[i]);
-        hammingCode[dataBits - i - 1] = data[i]; // Store data bits in reverse order
-    }
-
-    // Calculate the number of parity bits required
-    for (i = 0; i < dataBits; i++) {
-        if (pow(2, i) >= dataBits + i + 1)
-            break;
-    }
-    int numParityBits = i;
-
-    // Set the parity bits
-    for (i = 0; i < numParityBits; i++) {
-        int parityBitPos = pow(2, i) - 1;
-        int parityBit = 0;
-
-        for (j = parityBitPos; j < hammingCodeLen; j += (parityBitPos + 1) * 2) {
-            for (k = 0; k <= parityBitPos && j + k < hammingCodeLen; k++) {
-                parityBit ^= hammingCode[j + k];
-            }
-        }
-
-        hammingCode[parityBitPos] = parityBit;
-    }
-
-    printf("Hamming code: ");
-    for (i = hammingCodeLen - 1; i >= 0; i--) {
-        printf("%d ", hammingCode[i]);
-    }
-    printf("\n");
-
-    return 0;
+	int error_pos = 0;
+	for(i=0;i<p_n;i++)
+	{
+		int position = (int)pow(2,i);
+		int value = ham_calc(position,c_l);
+		if(value != 0)
+			error_pos+=position;
+	}
+	if(error_pos == 1)
+		printf("The received Code Word is correct.\n");
+	else
+		printf("Error at bit position: %d\n",error_pos);
+}
+int ham_calc(int position,int c_l)
+{
+	int count=0,i,j;
+	i=position-1;
+	while(i<c_l)
+	{
+		for(j=i;j<i+position;j++)
+		{
+			if(code[j] == 1)
+				count++;
+		}
+		i=i+2*position;
+	}
+	if(count%2 == 0)
+		return 0;
+	else
+		return 1;
 }
