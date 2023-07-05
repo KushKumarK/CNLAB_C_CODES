@@ -3,29 +3,33 @@
 #include <string.h>
 
 // Function to calculate the checksum
-unsigned short calculateChecksum(char *data, int dataSize)
+unsigned short calculateChecksum(unsigned char *data, int dataSize)
 {
     unsigned long sum = 0;
     int i;
 
-    // Calculate the sum of all 16-bit chunks
-    for (i = 0; i < dataSize - 1; i += 2)
+    // If there is an extra byte at the start, add it to the sum
+    if (dataSize % 2 == 1)
     {
-        unsigned short chunk = (data[i] << 8) | data[i + 1];
-        sum += chunk;
+        unsigned short firstByte = data[0];
+        sum += firstByte;
 
         // Handle carry overflow
         if (sum & 0xFFFF0000)
         {
             sum = (sum & 0xFFFF) + 1;
         }
+
+        // Increment the data pointer and decrement the data size
+        data++;
+        dataSize--;
     }
 
-    // If there is an odd number of bytes, add the last byte to the sum
-    if (dataSize % 2 == 1)
+    // Calculate the sum of all 16-bit chunks
+    for (i = 0; i < dataSize; i += 2)
     {
-        unsigned short lastByte = data[dataSize - 1] << 8;
-        sum += lastByte;
+        unsigned short chunk = (data[i] << 8) | data[i + 1];
+        sum += chunk;
 
         // Handle carry overflow
         if (sum & 0xFFFF0000)
@@ -39,69 +43,64 @@ unsigned short calculateChecksum(char *data, int dataSize)
 
 int main()
 {
-    char data[100];
+    char hexData[100];
+    unsigned char data[50];
     unsigned short checksum;
     int dataSize, i;
 
-    printf("Enter the data: ");
-    fgets(data, sizeof(data), stdin);
-    dataSize = strlen(data) - 1;
-    data[dataSize] = '\0';
+    printf("Enter the data in hexadecimal format: ");
+    fgets(hexData, sizeof(hexData), stdin);
+    dataSize = strlen(hexData) - 1;
+    hexData[dataSize] = '\0';
+
+    // Remove spaces from the input
+    for (i = 0; i < dataSize; i++)
+    {
+        if (hexData[i] == ' ')
+        {
+            memmove(hexData + i, hexData + i + 1, dataSize - i);
+            dataSize--;
+            i--;
+        }
+    }
+
+    // Convert the input from hexadecimal to binary
+    dataSize = dataSize / 2;
+    for (i = 0; i < dataSize; i++)
+    {
+        sscanf(hexData + i * 2, "%2hhx", &data[i]);
+    }
 
     checksum = calculateChecksum(data, dataSize);
 
     printf("\nStep-by-Step Calculation:\n");
-    printf("Data: %s\n", data);
+    printf("Data: %s\n", hexData);
 
     // Print each 16-bit chunk
     printf("16-bit Chunks:\n");
-    for (i = 0; i < dataSize - 1; i += 2)
+    
+    // If there is an extra byte at the start, print it
+    if (dataSize % 2 == 1)
+    {
+        printf("%02X ", data[0]);
+        
+        // Increment the data pointer and decrement the data size
+        *(data+1);
+        dataSize--;
+    }
+    
+    for (i = 0; i < dataSize; i += 2)
     {
         unsigned short chunk = (data[i] << 8) | data[i + 1];
         printf("%04X ", chunk);
     }
-    if (dataSize % 2 == 1)
-    {
-        printf("%02X00 ", data[dataSize - 1]);
-    }
+    
     printf("\n");
 
     // Calculate the sum of all 16-bit chunks
-    unsigned long sum = 0;
-    for (i = 0; i < dataSize - 1; i += 2)
-    {
-        unsigned short chunk = (data[i] << 8) | data[i + 1];
-        sum += chunk;
+    unsigned long sum = calculateChecksum(data, dataSize);
 
-        // Handle carry overflow
-        if (sum & 0xFFFF0000)
-        {
-            sum = (sum & 0xFFFF) + 1;
-        }
-
-        printf("Sum: %08lX\n", sum);
-    }
-
-    // If there is an odd number of bytes, add the last byte to the sum
-    if (dataSize % 2 == 1)
-    {
-        unsigned short lastByte = data[dataSize - 1] << 8;
-        sum += lastByte;
-
-        // Handle carry overflow
-        if (sum & 0xFFFF0000)
-        {
-            sum = (sum & 0xFFFF) + 1;
-        }
-
-        printf("Sum: %08lX\n", sum);
-    }
-
-    // Calculate the one's complement of the sum
-    unsigned short onesComplement = (unsigned short)(~sum);
-
-    printf("\nChecksum (One's Complement): %04X\n", onesComplement);
-    printf("Final Checksum: %04X\n", checksum);
+    printf("\nChecksum (One's Complement): %04X\n", checksum);
 
     return 0;
 }
