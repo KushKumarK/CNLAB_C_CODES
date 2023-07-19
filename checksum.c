@@ -1,106 +1,57 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
-// Function to calculate the checksum
-unsigned short calculateChecksum(unsigned char *data, int dataSize)
-{
-    unsigned long sum = 0;
-    int i;
+unsigned short calculateChecksum(const char* data) {
+    int length = strlen(data);
+    unsigned int sum = 0;
 
-    // If there is an extra byte at the start, add it to the sum
-    if (dataSize % 2 == 1)
-    {
-        unsigned short firstByte = data[0];
-        sum += firstByte;
-
-        // Handle carry overflow
-        if (sum & 0xFFFF0000)
-        {
-            sum = (sum & 0xFFFF) + 1;
-        }
-
-        // Increment the data pointer and decrement the data size
-        data++;
-        dataSize--;
+    for (int i = 0; i < length; i += 2) {
+        // Extract two characters as a hex number
+        char hexByte[3];
+        strncpy(hexByte, data + i, 2);
+        hexByte[2] = '\0';
+        unsigned int num = (unsigned int)strtol(hexByte, NULL, 16);
+        sum += num;
     }
 
-    // Calculate the sum of all 16-bit chunks
-    for (i = 0; i < dataSize; i += 2)
-    {
-        unsigned short chunk = (data[i] << 8) | data[i + 1];
-        sum += chunk;
-
-        // Handle carry overflow
-        if (sum & 0xFFFF0000)
-        {
-            sum = (sum & 0xFFFF) + 1;
-        }
+    // Fold the carry bits
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
     }
 
-    return (unsigned short)(~sum);
+    // Take the one's complement of the result
+    unsigned short checksum = (unsigned short)~sum;
+    return checksum;
 }
 
-int main()
-{
-    char hexData[100];
-    unsigned char data[50];
-    unsigned short checksum;
-    int dataSize, i;
+bool isChecksumValid(const char* data, const char* checksum, unsigned short* calculatedChecksum) {
+    *calculatedChecksum = calculateChecksum(data);
+    unsigned short givenChecksum = (unsigned short)strtol(checksum, NULL, 16);
+    return (*calculatedChecksum == givenChecksum);
+}
 
-    printf("Enter the data in hexadecimal format: ");
-    fgets(hexData, sizeof(hexData), stdin);
-    dataSize = strlen(hexData) - 1;
-    hexData[dataSize] = '\0';
+int main() {
+    char input[100];
+    char checksum[5];
+    unsigned short calculatedChecksum;
 
-    // Remove spaces from the input
-    for (i = 0; i < dataSize; i++)
-    {
-        if (hexData[i] == ' ')
-        {
-            memmove(hexData + i, hexData + i + 1, dataSize - i);
-            dataSize--;
-            i--;
-        }
+    printf("Enter numbers in hexadecimal format (without spaces): ");
+    scanf("%s", input);
+
+    printf("Enter checksum in hexadecimal format: ");
+    scanf("%s", checksum);
+
+    bool isValid = isChecksumValid(input, checksum, &calculatedChecksum);
+
+    printf("Calculated Checksum: 0x%04X\n", calculatedChecksum);
+
+    if (isValid) {
+        printf("Checksum is valid.\n");
+    } else {
+        printf("Checksum is invalid.\n");
     }
-
-    // Convert the input from hexadecimal to binary
-    dataSize = dataSize / 2;
-    for (i = 0; i < dataSize; i++)
-    {
-        sscanf(hexData + i * 2, "%2hhx", &data[i]);
-    }
-
-    checksum = calculateChecksum(data, dataSize);
-
-    printf("\nStep-by-Step Calculation:\n");
-    printf("Data: %s\n", hexData);
-
-    // Print each 16-bit chunk
-    printf("16-bit Chunks:\n");
-    
-    // If there is an extra byte at the start, print it
-    if (dataSize % 2 == 1)
-    {
-        printf("%02X ", data[0]);
-        
-        // Increment the data pointer and decrement the data size
-        *(data+1);
-        dataSize--;
-    }
-    
-    for (i = 0; i < dataSize; i += 2)
-    {
-        unsigned short chunk = (data[i] << 8) | data[i + 1];
-        printf("%04X ", chunk);
-    }
-    
-    printf("\n");
-
-    // Calculate the sum of all 16-bit chunks
-    unsigned long sum = calculateChecksum(data, dataSize);
-
-    printf("\nChecksum (One's Complement): %04X\n", checksum);
 
     return 0;
 }
