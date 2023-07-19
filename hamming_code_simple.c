@@ -1,85 +1,133 @@
 #include <stdio.h>
-#include <math.h>
-int input[32];
-int code[32];
-int ham_calc(int,int);
-void main()
-{
-	int n,i,p_n = 0,c_l,j,k;
-	printf("Please enter the length of the Data Word: ");
-	scanf("%d",&n);
-	printf("Please enter the Data Word:\n");
-	for(i=0;i<n;i++)
-	{
-		scanf("%d",&input[i]);
-	}
+#include <stdbool.h>
 
-	i=0;
-	while(n>(int)pow(2,i)-(i+1))
-	{
-		p_n++;
-		i++;
-	}
-		
-	c_l = p_n + n;
+// Function to generate Hamming code
+void generateHammingCode(int data[], int dataSize, int hammingCode[], int hammingCodeSize) {
+    int i, j, k;
+    bool isPowerOfTwo;
 
-	j=k=0;
-	for(i=0;i<c_l;i++)
-	{
-		
-		if(i==((int)pow(2,k)-1))
-		{
-			code[i]=0;
-			k++;
-		}
-		else
-		{
-			code[i]=input[j];
-			j++;
-		}
-	}
-	for(i=0;i<p_n;i++)
-	{
-		int position = (int)pow(2,i);
-		int value = ham_calc(position,c_l);
-		code[position-1]=value;
-	}
-	printf("\nThe calculated Code Word is: ");
-	for(i=0;i<c_l;i++)
-		printf("%d",code[i]);
-	printf("\n");
-	printf("Please enter the received Code Word:\n");
-	for(i=0;i<c_l;i++)
-		scanf("%d",&code[i]);
+    // Initialize all bits in the Hamming code as 0
+    for (i = 0; i < hammingCodeSize; i++) {
+        hammingCode[i] = 0;
+    }
 
-	int error_pos = 0;
-	for(i=0;i<p_n;i++)
-	{
-		int position = (int)pow(2,i);
-		int value = ham_calc(position,c_l);
-		if(value != 0)
-			error_pos+=position;
-	}
-	if(error_pos == 1)
-		printf("The received Code Word is correct.\n");
-	else
-		printf("Error at bit position: %d\n",error_pos);
+    // Copy the data bits into the Hamming code
+    j = 0;
+    k = 1;
+    for (i = 0; i < hammingCodeSize; i++) {
+        isPowerOfTwo = (k & (k - 1)) == 0;
+
+        if (!isPowerOfTwo) {
+            hammingCode[i] = data[j++];
+        }
+
+        k++;
+    }
+
+    // Calculate and set the parity bits
+    for (i = 0; i < hammingCodeSize; i++) {
+        isPowerOfTwo = (i & (i + 1)) == 0;
+
+        if (isPowerOfTwo) {
+            int parityBit = 0;
+
+            for (j = i; j < hammingCodeSize; j++) {
+                if (j & (1 << i)) {
+                    parityBit ^= hammingCode[j];
+                }
+            }
+
+            hammingCode[i] = parityBit;
+        }
+    }
 }
-int ham_calc(int position,int c_l)
-{
-	int count=0,i,j;
-	i=position-1;
-	while(i<c_l)
-	{
-		for(j=i;j<i+position;j++)
-		{
-			if(code[j] == 1)
-				count++;
-		}
-		i=i+2*position;
-	}
-	if(count%2 == 0)
-		return 0;
-	else
-		return 1;
+
+// Function to check and correct errors in Hamming code
+bool checkAndCorrectHammingCode(int receivedHammingCode[], int hammingCodeSize) {
+    int errorBitPosition = 0;
+    int i, j;
+
+    // Calculate the position of the error bit
+    for (i = 0; i < hammingCodeSize; i++) {
+        int bit = 0;
+
+        for (j = 0; j < hammingCodeSize; j++) {
+            if (j != i && (j & (1 << i))) {
+                bit ^= receivedHammingCode[j];
+            }
+        }
+
+        if (bit != receivedHammingCode[i]) {
+            errorBitPosition += i + 1;
+        }
+    }
+
+    // If an error is detected, correct the received Hamming code
+    if (errorBitPosition > 0) {
+        printf("Error detected at bit position %d.\n", errorBitPosition);
+
+        // Correct the error by flipping the corresponding bit
+        receivedHammingCode[errorBitPosition - 1] ^= 1;
+
+        return true;
+    }
+
+    return false;
+}
+
+// Function to print an array
+void printArray(int arr[], int size) {
+    for (int i = 0; i < size; i++) {
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+}
+
+int main() {
+    // Define the original data bits
+    int data[] = {1, 0, 1, 0};
+
+    // Calculate the number of parity bits required
+    int dataSize = sizeof(data) / sizeof(data[0]);
+    int hammingCodeSize = 0;
+
+    int i = 0;
+    while (dataSize + i + 1 > (1 << i)) {
+        i++;
+    }
+    hammingCodeSize = dataSize + i;
+
+    // Create arrays for the Hamming code
+    int hammingCode[hammingCodeSize];
+    int receivedHammingCode[hammingCodeSize];
+
+    // Generate Hamming code
+    generateHammingCode(data, dataSize, hammingCode, hammingCodeSize);
+
+    printf("Original data bits: ");
+    printArray(data, dataSize);
+
+    printf("Generated Hamming code: ");
+    printArray(hammingCode, hammingCodeSize);
+
+    // Simulate an error by flipping a bit in the received Hamming code
+    for (int i = 0; i < hammingCodeSize; i++) {
+        receivedHammingCode[i] = hammingCode[i];
+    }
+    receivedHammingCode[2] ^= 1; // Flip the bit at position 2
+
+    printf("Received Hamming code (with error): ");
+    printArray(receivedHammingCode, hammingCodeSize);
+
+    // Check and correct errors in the received Hamming code
+    bool hasError = checkAndCorrectHammingCode(receivedHammingCode, hammingCodeSize);
+
+    if (!hasError) {
+        printf("No error detected in the received Hamming code.\n");
+    } else {
+        printf("Corrected Hamming code: ");
+        printArray(receivedHammingCode, hammingCodeSize);
+    }
+
+    return 0;
 }
