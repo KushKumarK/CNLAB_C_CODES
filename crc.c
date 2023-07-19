@@ -1,62 +1,83 @@
-#include<stdio.h>
-#include<string.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-#define N strlen(gen_poly)
+char text[100];
+char key[100];
+char rem[100];
 
-char data[28];
-char check_value[28];
-char gen_poly[10];
-int data_length,i,j;
+void crc() {
+    int i, j;
+    int keylen, textlen;
+    char temp[100];
 
-void XOR(){
-    for(j = 1;j < N; j++)
-    check_value[j] = (( check_value[j] == gen_poly[j])?'0':'1');
+    strcpy(temp, text);
+    keylen = strlen(key);
+
+    for (i = 0; i < keylen - 1; i++) {
+        strcat(temp, "0");
+    }
+
+    textlen = strlen(temp);
+    strncpy(rem, temp, keylen);
+
+    while (i != textlen) {
+        if (rem[0] == '0') {
+            strcpy(rem, &rem[1]);
+            rem[keylen - 1] = temp[i++];
+            rem[keylen] = '\0';
+            continue;
+        }
+
+        for (j = 0; j < keylen; j++) {
+            rem[j] = ((rem[j] - '0') ^ (key[j] - '0')) + '0';
+        }
+    }
 }
 
-void receiver(){
-    printf("Enter the received data: ");
-    scanf("%s", data);
-    printf("\n-----------------------------\n");
-    printf("Data received: %s", data);
-    crc();
-    for(i=0;(i<N-1) && (check_value[i]!='1');i++);
-        if(i<N-1)
-            printf("\nError detected\n\n");
-        else
-            printf("\nNo error detected\n\n");
-}
+int main() {
+    int i;
+    int choice;
 
-void crc(){
-    for(i=0;i<N;i++)
-        check_value[i]=data[i];
-    do{
-        if(check_value[0]=='1')
-            XOR();
-        for(j=0;j<N-1;j++)
-            check_value[j]=check_value[j+1];
-        check_value[j]=data[i++];
-    }while(i<=data_length+N-1);
-}
+    while (1) {
+        printf("\n1. Find CRC\n2. Check CRC\n3. Exit CRC\nYour choice: ");
+        scanf("%d", &choice);
 
-int main()
-{
-    printf("\nEnter data to be transmitted: ");
-    scanf("%s",data);
-    printf("\n Enter the Generating polynomial: ");
-    scanf("%s",gen_poly);
-    data_length=strlen(data);
-    for(i=data_length;i<data_length+N-1;i++)
-        data[i]='0';
-    printf("\n----------------------------------------");
-    printf("\n Data padded with n-1 zeros : %s",data);
-    printf("\n----------------------------------------");
-    crc();
-    printf("\nCRC or Check value is : %s",check_value);
-    for(i=data_length;i<data_length+N-1;i++)
-        data[i]=check_value[i-data_length];
-    printf("\n----------------------------------------");
-    printf("\n Final data to be sent : %s",data);
-    printf("\n----------------------------------------\n");
-    receiver();
-        return 0;
+        switch (choice) {
+            case 1:
+                printf("Enter the input string: ");
+                scanf("%s", text);
+                printf("Enter the key: ");
+                scanf("%s", key);
+                crc();
+                printf("The transmitted message is %s\n", strcat(text, rem));
+                break;
+
+            case 2:
+                printf("Enter the input string: ");
+                scanf("%s", text);
+                printf("Enter the key: ");
+                scanf("%s", key);
+                crc();
+
+                for (i = 0; i < strlen(rem); i++) {
+                    if (rem[i] == '1')
+                        break;
+                }
+
+                if (i == strlen(key) - 1)
+                    printf("There is no error in the message\n");
+                else
+                    printf("There is an error in the message\n");
+                break;
+
+            case 3:
+                exit(0);
+
+            default:
+                printf("Invalid choice. Please try again.\n");
+                break;
+        }
+    }
+    return 0;
 }
